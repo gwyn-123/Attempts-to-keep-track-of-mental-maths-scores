@@ -1,0 +1,158 @@
+---
+title: "Mental Maths Analysis"
+author: "Tran_Phuc_Nguyen"
+date: "2026-08-09"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r set up data}
+library(zoo)
+non_zeta_data <- read.csv("Scores_mental_math.csv")
+zeta_data <- read.csv("zeta_mental_math_scores.csv")
+
+non_zeta_data_attempts <- non_zeta_data$Attempts
+non_zeta_data_scores <- non_zeta_data$Scores
+zeta_data_attempts <- zeta_data$Attempts
+zeta_data_scores <- zeta_data$Scores
+```
+
+```{r non zeta data plot}
+# Non zeta data plot
+
+#Plot empty plot
+plot(x = non_zeta_data_attempts, y = non_zeta_data_scores, xlab = "Attempts",
+     ylab = "Scores", main = "Scores Against Attempts (Non-zeta)", type = "n")
+
+#Plot the grid
+axis(side = 1, at = seq(0,600, by = 50))
+abline(v = seq(from = 0, to = 600, by = 50), col = "black", lty = "solid")
+abline(h = seq(from = 0, to = 80, by = 10), col = "black", lty = "solid")
+
+#Plot the points
+#Attempts 1-460 are the old methods
+#Attempts 460 - 600 are the new methods
+points(x = non_zeta_data_attempts[1:460], y = non_zeta_data_scores[1:460],
+       col = "#314776", pch = 16, cex = 0.5)
+points(x = non_zeta_data_attempts[461:length(non_zeta_data_attempts)], 
+       y = non_zeta_data_scores[461:length(non_zeta_data_attempts)],
+       col = "#009966", pch = 16, cex = 0.5)
+
+#Rolling mean for every 20 attempts
+rolling_average_20 <- rollmean(non_zeta_data_scores, k = 20, fill = NA, 
+                               align = "right")
+lines(x = non_zeta_data_attempts, y = rolling_average_20, col = "red", lwd = 3)
+
+#Mean of the last 50 attempts
+tail_last_50_attempts <- tail(non_zeta_data_scores, 50)
+mean_last_50_attempts <- mean(tail_last_50_attempts)
+abline(h = mean_last_50_attempts, lty = 2, lwd = 3, col = "blue")
+
+#legend & label
+text(x = 350, y = mean_last_50_attempts + 5, 
+     paste0("y =", round(mean_last_50_attempts, 2)),
+     col = "blue")
+legend(x = -91, y = 105, legend = c("Rolling mean 20 attempts ", 
+                               "50 last attempts mean", "Data pre new method",
+                               "New method data"),
+       lty = c(1,1,NA,NA), pch = c(NA,NA,16,16),
+       col = c("red", "blue", "#314776", "#009966"),
+       cex = 0.6,
+       xpd = TRUE)
+```
+
+```{r candlestick experiment}
+#Divide 600 variables into 60 chunks of 10 variables
+non_zeta_scores_chunk <- split(x = non_zeta_data_scores, 
+                               f = ceiling(seq_along(non_zeta_data_scores)/10))
+#Plot an empty graph first
+df_open <- sapply(non_zeta_scores_chunk, function(x) x[1])
+df_close <- sapply(non_zeta_scores_chunk, function(x) x[10])
+df_low <- sapply(non_zeta_scores_chunk, function(x) min(x))
+df_high <- sapply(non_zeta_scores_chunk, function(x) max(x))
+
+plot(x = seq_along(non_zeta_scores_chunk), y = df_close, type = "n",
+     xlab = "Attempts", ylab = "Scores", main = "Scores Against Attempts",
+     ylim = c(0, 100))
+
+#Plot the candlesticks
+for (i in seq_along(df_open)) {
+  
+  #wick low to high
+  segments(
+    x0 = i,
+    y0 = df_low[i],
+    x1 = i,
+    y1 = df_high[i]
+  )
+  
+  #Candle colour
+  candle_col <- if (df_close[i] > df_open[i]){
+    "green"
+  } else
+  {
+  "red"
+  }
+  
+  #Candle body
+  rect(
+    xleft = i - 0.3,
+    ybottom = min(df_open[i], df_close[i]),
+    xright = i + 0.3,
+    ytop =  max(df_open[i], df_close[i]),
+    col = candle_col
+  )
+}
+```
+
+```{r candlestick zeta}
+#Divide 80 variables into 10 chunks, each of 10 variables
+zeta_scores_chunk <- split(x = zeta_data_scores, 
+                           f = ceiling(seq_along(zeta_data_scores)/10))
+#Plot an empty graph
+df_open_zeta <-sapply(zeta_scores_chunk, function(x) x[1])
+df_close_zeta <- sapply(zeta_scores_chunk, function(x) x[10])
+df_low_zeta <- sapply(zeta_scores_chunk, function(x) min(x))
+df_high_zeta <- sapply(zeta_scores_chunk, function(x) max(x))
+
+plot(x = seq_along(zeta_scores_chunk), y = df_high_zeta, type = "n",
+     xlab = "Attempts", ylab = "Scores", 
+     main = "Scores Against Attempts (Zeta)", ylim = c(0,100))
+
+#Plot the candlesticks
+for (i in seq_along(df_open_zeta)){
+  
+  #wick low to high
+  segments(
+    x0 = i,
+    y0 = df_low_zeta[i],
+    x1 = i,
+    y1 = df_high_zeta[i]
+  )
+  #Candle colour
+  candle_col_zeta <- if ( df_close_zeta[i] > df_open_zeta[i]){
+    "green"
+  } else {
+    "red"
+  }
+  #Candle body
+  rect(
+    xleft = i - 0.3,
+    ybottom = min(df_close_zeta[i], df_open_zeta[i]),
+    xright = i + 0.3,
+    ytop = max(df_close_zeta[i], df_open_zeta[i]),
+    col = candle_col_zeta
+  )
+}
+  
+```
+
+```{r qq plot}
+qqnorm(non_zeta_data_scores)
+qqline(non_zeta_data_scores, col = "red", lty = 4)
+```

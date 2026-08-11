@@ -1,0 +1,252 @@
+---
+title: "Score Mental Maths Report"
+author: "Tran Phuc Nguyen"
+date: "2026-05-11"
+output:
+  pdf_document: default
+  html_document: default
+header-includes:
+  - \usepackage{xcolor}
+  - \pagecolor[HTML]{FFFDD0}
+  - \definecolor{shadecolor}{HTML}{F7EFB8}
+   \renewcommand{\familydefault}{\ttdefault}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r Loading Data and library}
+library(dplyr)
+library(zoo)
+
+scores <- read.csv("Scores_mental_math.csv")
+num_of_attempt <- scores$Attempts
+question_scores <- scores$Scores
+question_scores_old_method <- scores$Scores[1:460]
+question_scores_new_method <- scores$Scores[461: length(scores$Scores)]
+seconds_per_question_old_method <- 120/question_scores_old_method
+seconds_per_question_new_method <- 120/question_scores_new_method
+scores_zeta <- read.csv("zeta_mental_math_scores.csv")
+num_of_attempt_zeta <- scores_zeta$Attempts
+question_scores_zeta <- scores_zeta$Scores
+```
+
+```{r Sketch Plot of Scores Against Attempts}
+par(bg = "#FFFDD0", family = "mono")
+plot(x = num_of_attempt, y = question_scores,type = "n", xlab = "Attempts", 
+     ylab = "Scores",
+     main = "The Scores of Mental Maths Against Number of Attempts")
+axis(side = 1,
+     at = seq(0, 600, by = 50))
+abline(v = seq(0, 600, by = 50),
+       lty = "solid",
+       col = "black")
+abline(h = seq(10, 70, by = 10),
+       lty = "solid",
+       col = "black")
+points(x = num_of_attempt[1:460], y = question_scores_old_method, col = "#314776",
+       pch = 16, cex = 0.5)
+points(x = num_of_attempt[461: length(num_of_attempt)], y = question_scores_new_method,
+       col = "#009966", pch = 16, cex = 0.5)
+
+#Roll - mean for scores every 20 attempts
+rolling_average_20 <- rollmean(question_scores, k = 20, fill = NA, align = "right")
+lines(x = num_of_attempt, y = rolling_average_20, col = "#B22222", lwd = 3)
+
+#Average of the last 50 attempts
+tail_50_attempts <- tail(question_scores, 50)
+mean_last_50_attempts <- mean(tail_50_attempts)
+abline(h = mean_last_50_attempts, lty = 2, col = "blue", lwd = 3)
+
+#legend
+legend(x = 0, y = 82,cex = 0.5, 
+       legend = c("20-attempt moving average", "Mean score of the last 50 attempts"),
+       fill = c("#B22222", "blue"))
+#label
+text(x = 350 ,
+     y = mean_last_50_attempts + 5, 
+     paste0("y =", round(mean_last_50_attempts, 2)),
+     col = "blue")
+```
+
+```{r Sketch Plot of Time per Question against log(Attempts) }
+time_per_question <- 120/question_scores
+time_per_question_old <- 120/question_scores_old_method
+time_per_question_new <- 120/question_scores_new_method
+par(bg = "#FFFDD0", family = "mono")
+plot(x = num_of_attempt, y = log(time_per_question, base = exp(1)), 
+     type = "n", xlab = "Attempts", 
+     ylab = "log(Time per Question) (seconds)",
+     main = "The Time per Question Against Number of Attempts")
+axis(side = 1,
+     at = seq(0, 600, by = 50))
+abline(v = seq(0, 600, by = 50),
+       lty = "solid",
+       col = "black")
+abline(h = seq(0.5, 2.5, by = 0.5),
+       lty = "solid",
+       col = "black")
+points(x = num_of_attempt[1:460], y = log(time_per_question_old, base = exp(1))
+       , col = "#314776",
+       pch = 19, cex = 0.5)
+points(x = num_of_attempt[461:length(num_of_attempt)], 
+       y = log(time_per_question_new, base = exp(1))
+       , col = "#009966",
+       pch = 19, cex = 0.5)
+y <- log(time_per_question, base = exp(1))
+quad_model <- lm(y ~ num_of_attempt + I(num_of_attempt^2))
+
+x_grid <- seq(
+  from = min(num_of_attempt),
+  to = max(num_of_attempt),
+  length.out = 200
+)
+
+y_quad <- predict(
+  quad_model,
+  newdata = data.frame(num_of_attempt = x_grid)
+)
+
+lines(
+  x = x_grid,
+  y = y_quad,
+  col = "#B22222",
+  lwd = 3
+)
+```
+
+```{r Sketch Time per Question against Attempts}
+cat("The scores is the number of questions answered in 120 seconds")
+par(bg = "#FFFDD0", family = "mono")
+plot(x = num_of_attempt, y = time_per_question, 
+     type = "n", xlab = "Attempts", 
+     ylab = "Time per Question (seconds)",
+     main = "The Time per Question Against Number of Attempts")
+axis(side = 1,
+     at = seq(0, 600, by = 50))
+abline(v = seq(0, 600, by = 50),
+       lty = "solid",
+       col = "black")
+abline(h = seq(0.5, 13, by = 0.5),
+       lty = "solid",
+       col = "black")
+points(x = num_of_attempt[1:460], y = time_per_question_old,
+       , col = "#314776",
+       pch = 19, cex = 0.5)
+points(x = num_of_attempt[461:length(num_of_attempt)], 
+       y = time_per_question_new, 
+       , col = "#009966",
+       pch = 19, cex = 0.5)
+
+```
+
+```{r Sketch Histogram of Scores}
+par(bg = "#FFFDD0", family = "mono")
+par(mfrow = c(1,2))
+hist(
+  question_scores,
+  probability = TRUE,
+  main = "Histogram of Question Scores",
+  xlab = "Scores",
+  col = "#314776"
+)
+
+mean_score <- mean(question_scores, na.rm = TRUE)
+sd_score <- sd(question_scores, na.rm = TRUE)
+
+x_grid <- seq(
+  from = min(question_scores, na.rm = TRUE),
+  to = max(question_scores, na.rm = TRUE),
+  length.out = 200
+)
+
+y_normal <- dnorm(
+  x_grid,
+  mean = mean_score,
+  sd = sd_score
+)
+
+lines(
+  x_grid,
+  y_normal,
+  col = "#B22222",
+  lwd = 2
+)
+
+hist(
+  time_per_question,
+  probability = TRUE,
+  main = "Histogram of Time Per Question (Seconds)",
+  xlab = "Time Per Question (Seconds)",
+  col = "#314776"
+)
+
+mean_score_2 <- mean(time_per_question, na.rm = TRUE)
+sd_score_2 <- sd(time_per_question, na.rm = TRUE)
+
+x_grid_2 <- seq(
+  from = min(time_per_question, na.rm = TRUE),
+  to = max(time_per_question, na.rm = TRUE),
+  length.out = 200
+)
+
+y_normal_2 <- dnorm(
+  x_grid_2,
+  mean = mean_score_2,
+  sd = sd_score_2
+)
+
+lines(
+  x_grid_2,
+  y_normal_2,
+  col = "#B22222",
+  lwd = 2
+)
+par(mfrow = c(1,1))
+```
+
+```{r Boxplot}
+par(bg = "#FFFDD0", family = "mono")
+par(mfrow = c(1,2))
+boxplot(question_scores, col = "#AC1F8E", main = "Scores Boxplot",
+        xlab = "Scores", horizontal = TRUE)
+boxplot(time_per_question, col = "#AC1F8E", main = "Seconds/Question Boxplot",
+        xlab = "Time per Question (Seconds)", horizontal = TRUE)
+par(mfrow = c(1,1))
+```
+
+```{r zeta mental maths score}
+par(bg = "#FFFDD0", family = "mono")
+plot(x = num_of_attempt_zeta, y = question_scores_zeta,type = "n", xlab = "Attempts", 
+     ylab = "Scores",
+     main = "Mental Maths Scores Against Number of Attempts (Zeta)",
+     ylim = c(0,80))
+abline(v = seq(0, 80, by = 10),
+       lty = "solid",
+       col = "black")
+abline(h = seq(0, 80, by = 10),
+       lty = "solid",
+       col = "black")
+points(x = num_of_attempt_zeta, y = question_scores_zeta, col = "#314776",
+       pch = 16, cex = 0.5)
+
+#Roll - mean for scores every 20 attempts
+#rolling_average_20_zeta <- rollmean(question_scores_zeta, k = 20, fill = NA, align = "right")
+#lines(x = num_of_attempt_zeta, y = rolling_average_20_zeta, col = "#B22222", lwd = 3)
+
+#Average of the last 50 attempts
+#tail_50_attempts_zeta <- tail(question_scores_zeta, 50)
+#mean_last_50_attempts_zeta <- mean(tail_50_attempts_zeta)
+#abline(h = mean_last_50_attempts_zeta, lty = 2, col = "blue", lwd = 3)
+
+#legend
+legend(x = 0, y = 82,cex = 0.5, 
+       legend = c("20-attempt moving average", "Mean score of the last 50 attempts"),
+       fill = c("#B22222", "blue"))
+#label
+#text(x = 350 ,
+    # y = mean_last_50_attempts + 5, 
+    # paste0("y =", round(mean_last_50_attempts, 2)),
+     #col = "blue")
+```
